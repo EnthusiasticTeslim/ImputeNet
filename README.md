@@ -2,7 +2,7 @@
 
 
 ## Folders
-1. `src`:  contains the python functions for training models. You'll find scripts, modules, and packages here that are used to implement the algorithms and methods involved in the work.
+1. `cdi`:  contains the python functions for training models. You'll find scripts, modules, and packages here that are used to implement the algorithms and methods involved in the work.
 
 2. `data`: store any necessary data files required for training models. This could include datasets, preprocessed data, or any other data-related resources.
 3. `notebooks`: contains Jupyter notebooks that showcase the step-by-step process of using functions in `src`. These notebooks are meant to provide interactive examples, tutorials, and documentation for using the code in the `src` folder.
