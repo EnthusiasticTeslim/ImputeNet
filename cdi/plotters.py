@@ -633,3 +633,61 @@ class Plotters():
 
         if save_fig:
                 plt.savefig(f'reports/images/{property}_data_distibution_comparison.png', transparent=True, bbox_inches='tight')
+
+
+
+def disp_shap_bar(shap_values, data, title = 'EC', color = 'red', figsize=(6, 4)):
+ 
+    
+    # plot bar
+    shap.summary_plot(shap_values, data, plot_type="bar", show=False, color=color)
+ 
+    fig1 = plt.gcf().set_size_inches(figsize)
+ 
+    plt.rcParams['mathtext.fontset'] = 'cm'
+    plt.rcParams["font.family"] = "serif"
+    plt.rcParams["font.serif"] = ["Times New Roman"
+                                            ] + plt.rcParams["font.serif"]
+    plt.rcParams['font.size'] = 13
+    plt.rcParams['figure.dpi'] = 600
+ 
+    plt.title(title)
+    plt.xlabel(r'$ \rm Feature\ importance$')
+ 
+    plt.show()
+
+
+def disp_shap_beeswarm(shap_values, data, title = 'EC', figsize=(6, 4)):
+ 
+    # plot bee swarm
+    shap.summary_plot(shap_values, feature_names=data.columns, features=data, show=False)
+ 
+    fig1 = plt.gcf().set_size_inches(figsize)
+ 
+    plt.rcParams['mathtext.fontset'] = 'cm'
+    plt.rcParams["font.family"] = "serif"
+    plt.rcParams["font.serif"] = ["Times New Roman"
+                                            ] + plt.rcParams["font.serif"]
+    plt.rcParams['font.size'] = 13
+    plt.rcParams['figure.dpi'] = 600
+ 
+    plt.title(title)
+    plt.xlabel(r'$ \rm Feature\ importance$')
+ 
+    plt.show()
+
+
+def disp_depedency_plot(shap_values, X, columns, idx, figsize=(6, 4)):
+    fig = plt.figure(figsize=figsize)
+    ax = fig.add_subplot(111)
+
+    # plot bee swarm on the specified axes
+    shap.dependence_plot(idx, shap_values, features=X, feature_names=columns, ax=ax)
+    
+    plt.rcParams['mathtext.fontset'] = 'cm'
+    plt.rcParams["font.family"] = "serif"
+    plt.rcParams["font.serif"] = ["Times New Roman"] + plt.rcParams["font.serif"]
+    plt.rcParams['font.size'] = 13
+    plt.rcParams['figure.dpi'] = 600
+
+    plt.show()
