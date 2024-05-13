@@ -1,4 +1,4 @@
-# Empowering Capacitive Devices: Harnessing Transfer Learning for Enhanced Data-Driven Optimization in Energy-Efficient Separations and Generation
+# Empowering Capacitive Devices: Harnessing Transfer Learning for Enhanced Data-Driven Optimization
 
 
 ## Folders
