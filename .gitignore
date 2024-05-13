@@ -1,0 +1,10 @@
+# Folders
+*ImputeNet
+# Extensions
+.DS_Store
+*/.DS_Store
+*/*/.DS_Store
+__pycache__
+*/__pycache__
+notebooks/test_DevOpt-specific-capacitance-tensorflow.ipynb
+.DS_Store

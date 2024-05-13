@@ -5,6 +5,14 @@ import shap
 import seaborn as sns
 from matplotlib import cm
 from matplotlib.ticker import (AutoLocator, AutoMinorLocator)
+from matplotlib.path import Path
+import matplotlib.patches as patches
+
+# 2D t-SNE plot
+from sklearn.manifold import TSNE
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import MinMaxScaler
+from hdbscan import HDBSCAN
 
 
 class Plotters():
@@ -206,58 +214,6 @@ class Plotters():
         plt.show()
         return None
     
-    def plot_pareto(self, res, threshold, name = 'opt_test', save_fig: bool = False):
-        fig = plt.figure(figsize=(7, 5))
-        axs1 = fig.add_subplot(1, 1, 1)
-
-        axs1.scatter(res.F[:, 1], -res.F[:, 0], color = 'red', edgecolors = 'k')
-
-        axs1.set_xlabel(r'$\rm kNN\ distance$',
-                                labelpad=5,
-                                fontsize='x-large')
-
-        axs1.set_ylabel(r'$\rm Peak\ power\ density\ (W/cm^{2})$',
-                        labelpad=5,
-                        fontsize='x-large')
-
-        # axs1.plot([threshold, threshold], [min(-res.F[:, 0]), max(-res.F[:, 0])], label = '2 x kNN threshold')
-        # axs1.plot([threshold/2, threshold/2], [min(-res.F[:, 0]), max(-res.F[:, 0])], label = 'kNN threshold')
-
-        
-        axs1 = self.ax_formatter(axs1, xax=False)
-
-        axs1.axvspan(min(res.F[:, 1]),
-                            threshold,
-                            facecolor='lightsteelblue',
-                            alpha=0.3)
-
-        axs1.axvspan(threshold,
-                            2*threshold,
-                            facecolor='cornflowerblue',
-                            alpha=0.3)
-
-        axs1.axvspan(2*threshold,
-                            axs1.get_xlim()[1],
-                            facecolor='royalblue',
-                            alpha=0.3)
-
-        axs1.text(min(res.F[:, 1]) + 0.05, max(-res.F[:, 0])*0.98, 'I')
-        axs1.text(threshold + 0.05, max(-res.F[:, 0])*0.98, 'II')
-        axs1.text(2*threshold + 0.05, max(-res.F[:, 0])*0.98, 'III')
-
-        #plt.legend(frameon=False)
-        axs1.set_ylim(min(-res.F[:, 0]), max(-res.F[:, 0])+0.05)
-        axs1.set_xlim(min(res.F[:, 1]), max(res.F[:, 1]))
-
-        if save_fig:
-            plt.savefig(
-                f'./reports/images/{name}.png',
-                transparent=True,
-                bbox_inches='tight')
-        plt.show()
-
-        return None
-    
     
     def plot_importance_map(self, data, approach = 'pearson', name='feature'):
         """
@@ -288,15 +244,17 @@ class Plotters():
         return None
 
     def plot_pareto(self, 
-                    res, 
+                    obj1, 
+                    obj2,
                     threshold, 
                     xlabel = r'$\rm kNN\ distance$',
-                    ylabel = r'$\rm Peak\ power\ density\ (W/cm^{2})$',
-                    name = 'opt_test'):
+                    ylabel = r'$\rm Salt\ Adsorption\ Capacity\ (mg/g)$',
+                    add_text = False,
+                    name = 'opt_test', show_fig=False):
         fig = plt.figure(figsize=(7, 5))
         axs1 = fig.add_subplot(1, 1, 1)
 
-        axs1.scatter(res.F[:, 1], -res.F[:, 0], color = 'red', edgecolors = 'k')
+        axs1.scatter(obj1, obj2, color = 'blue', edgecolors = 'b')
 
         axs1.set_xlabel(xlabel,
                                 labelpad=5,
@@ -308,38 +266,42 @@ class Plotters():
 
         axs1 = self.ax_formatter(axs1, xax=False)
 
-        axs1.axvspan(min(res.F[:, 1]),
-                            threshold,
-                            facecolor='lightsteelblue',
-                            alpha=0.3)
+        if add_text:
+            axs1.axvspan(min(obj1),
+                                threshold,
+                                facecolor='lightsteelblue',
+                                alpha=0.2)
 
-        axs1.axvspan(threshold,
-                            2*threshold,
-                            facecolor='cornflowerblue',
-                            alpha=0.3)
+            axs1.axvspan(threshold,
+                                2*threshold,
+                                facecolor='cornflowerblue',
+                                alpha=0.2)
 
-        axs1.axvspan(2*threshold,
-                            axs1.get_xlim()[1],
-                            facecolor='royalblue',
-                            alpha=0.3)
+            axs1.axvspan(2*threshold,
+                                axs1.get_xlim()[1],
+                                facecolor='royalblue',
+                                alpha=0.2)
+            
+            pd = 0.9
+            axs1.text(x=threshold/2, y=max(obj2)*pd, s='I', color='r', fontsize=15)
+            axs1.text(x=threshold + 0.05, y=max(obj2)*pd, s='II', color='r', fontsize=15)
+            axs1.text(x=2*threshold + 0.05, y=max(obj2)*pd, s='III', color='r', fontsize=15)
+        # adding padding of 1%
+        pad =  0.01
+        dx = (max(obj1) - min(obj1)) * pad
+        dy = (max(obj2) - min(obj2)) * pad
+        axs1.set_ylim(ymin=min(obj2) - dy, ymax=max(obj2)+dy)
+        axs1.set_xlim(xmin=min(obj1) - dx, xmax=max(obj1)+dx)
 
-        axs1.text(min(res.F[:, 1]) + 0.05, max(-res.F[:, 0])*0.98, 'I')
-        axs1.text(threshold + 0.05, max(-res.F[:, 0])*0.98, 'II')
-        axs1.text(2*threshold + 0.05, max(-res.F[:, 0])*0.98, 'III')
-
-        axs1.set_ylim(min(-res.F[:, 0]), max(-res.F[:, 0])+0.05)
-        axs1.set_xlim(min(res.F[:, 1]), max(res.F[:, 1]))
-
-
-        plt.savefig(
-            f'./reports/images/{name}.png',
-            transparent=True,
-            bbox_inches='tight')
-        plt.show()
+        if show_fig:
+            plt.savefig(
+                f'./reports/images/{name}.png',
+                transparent=True,
+                bbox_inches='tight')
+            plt.show()
 
         return None
-
-
+    
     def plot_shap_bar(self, 
                       shap_values, 
                       name: str = 'shap_bar'):
@@ -634,6 +596,32 @@ class Plotters():
         if save_fig:
                 plt.savefig(f'reports/images/{property}_data_distibution_comparison.png', transparent=True, bbox_inches='tight')
 
+    def plot_design_space(self, training_data):
+    
+        normalizer = MinMaxScaler()
+        tsne = TSNE(n_components=2)
+        pca = PCA(n_components=2)
+
+        scaled_X = normalizer.fit_transform(training_data)
+        X_tnse_2d = tsne.fit_transform(scaled_X)
+        X_pca_2d = pca.fit_transform(scaled_X)
+
+        labels_tnse = HDBSCAN(min_samples=5).fit_predict(X_tnse_2d)
+        labels_pca = HDBSCAN(min_samples=5).fit_predict(X_pca_2d)
+
+        fig, ax = plt.subplots(1, 2, figsize=(8, 4))
+
+        ax[0].scatter(X_pca_2d[:, 0], X_pca_2d[:, 1], c=labels_pca, cmap='Reds_r', s=10)
+        ax[0].set_title(r'$\rm PCA$', fontsize='x-large')
+        ax[0].set_xlabel(r'$\rm X1$', fontsize='x-large')
+        ax[0].set_ylabel(r'$\rm X2$', fontsize='x-large')
+
+        ax[1].scatter(X_tnse_2d[:, 0], X_tnse_2d[:, 1], c=labels_tnse, cmap='Reds_r', s=10) 
+        ax[1].set_title(r'$\rm t-SNE$')
+        ax[1].set_xlabel(r'$\rm X1$', fontsize='x-large')
+        #ax[1].set_ylabel(r'$\rm X2$', fontsize='x-large')
+
+        plt.tight_layout()
 
 
 def disp_shap_bar(shap_values, data, title = 'EC', color = 'red', figsize=(6, 4)):
@@ -691,3 +679,355 @@ def disp_depedency_plot(shap_values, X, columns, idx, figsize=(6, 4)):
     plt.rcParams['figure.dpi'] = 600
 
     plt.show()
+
+def plot_elbow(distances, threshold, name = 'elbow', save_fig: bool = False):
+
+        fig = plt.figure(figsize=(10, 4))
+
+        axs = fig.add_subplot(111) 
+
+        distances = np.sort(distances[distances != 0])
+
+        axs.plot(
+                distances,
+                color = 'purple')
+
+        axs.plot(
+                [0, len(distances)],
+                [threshold, threshold],
+                color = 'r',
+                linestyle = '--',
+                label = 'knn distance threshold')
+
+
+        axs.set_xlabel(r'$\rm Sample$', labelpad=5, fontsize='x-large')
+        axs.set_ylabel(r'$\rm kNN\ distance$', labelpad=5, fontsize='x-large')
+
+        #axs = self.ax_formatter(axs, xax=False)
+        axs.legend(frameon=False, ncol=2)
+
+        if save_fig:
+            plt.savefig(
+                f'./reports/images/{name}.png',
+                transparent=True,
+                bbox_inches='tight')
+
+        plt.show()
+        return None
+
+def plot_pareto(res, threshold, 
+                ylabel = r'$\rm Peak\ density\ (W/cm^{2})$',
+                name = 'test', save_fig: bool = False):
+        fig = plt.figure(figsize=(7, 5))
+        axs = fig.add_subplot(1, 1, 1)
+
+        axs.scatter(res.F[:, 1], -res.F[:, 0], color = 'red', edgecolors = 'k')
+
+        axs.set_xlabel(r'$\rm kNN\ distance$',
+                                labelpad=5,
+                                fontsize='x-large')
+
+        axs.set_ylabel(ylabel,
+                        labelpad=5,
+                        fontsize='x-large')
+
+
+        axs.axvspan(min(res.F[:, 1]),
+                            threshold,
+                            facecolor='lightsteelblue',
+                            alpha=0.3)
+
+        axs.axvspan(threshold,
+                            2*threshold,
+                            facecolor='cornflowerblue',
+                            alpha=0.3)
+
+        axs.axvspan(2*threshold,
+                            axs.get_xlim()[1],
+                            facecolor='royalblue',
+                            alpha=0.3)
+
+        axs.text(min(res.F[:, 1]) + 0.05, max(-res.F[:, 0])*0.98, 'I')
+        axs.text(threshold + 0.05, max(-res.F[:, 0])*0.98, 'II')
+        axs.text(2*threshold + 0.05, max(-res.F[:, 0])*0.98, 'III')
+
+        #plt.legend(frameon=False)
+        axs.set_ylim(min(-res.F[:, 0]), max(-res.F[:, 0])+0.05)
+        axs.set_xlim(min(res.F[:, 1]), max(res.F[:, 1]))
+
+        if save_fig:
+            plt.savefig(
+                f'./reports/images/{name}.png',
+                transparent=True,
+                bbox_inches='tight')
+        plt.show()
+
+        return None
+
+def plot_multi_ga_case_D1(res, num_features: int = 10,
+                  is_max: bool = True,
+                  name = 'multi_ga',
+                  save_fig: bool = False):
+        # credit: https://stackoverflow.com/questions/8230638/parallel-coordinates-plot-in-matplotlib
+        
+        # get the X and F values
+        if is_max: 
+            sol_array = np.asarray(-res.F[:, 0]).reshape(-1,) #* 1e-2
+        else:
+            sol_array = np.asarray(res.F[:, 0]).reshape(-1,)
+
+        pos_array = np.asarray(res.X).reshape(-1, num_features)
+        pos_array = np.column_stack((pos_array, sol_array))
+
+        x = np.arange(0, len(pos_array[0, :]))
+
+        # y_axes names
+        #[VW, FR, CNaCl, SSA, PV, Psave, PVmicro, ID_IG, N, O]
+        all_labels = [
+            r'$\rm VW$', r'$\rm FR$', r'$\rm CNaCl$', r'$\rm SSA$', 
+            r'$\rm PV$', r'$\rm Psave$', r'$\rm PVmicro$', r'$\rm ID/IG$', 
+            r'$\rm N\ content$', r'$\rm O\ content$', r'$\rm SAC$']
+
+        all_units = [
+            r'$\rm V$', r'$\rm ml/min$', r'$\rm mg/l$', r'$\rm m^{2}/g$', 
+            r'$\rm cm^{3}/g$', r'$\rm cm^{3}/g$', r'$\rm cm^{3}/g$', r'$\rm unitless$', 
+            r'$\rm at.\%$', r'$\rm at.\%$',  r'$\rm mg/g$']
+
+        labels = [f'{all_labels[i]}\n({all_units[i]})' for i in range(len(all_labels))]
+
+
+        # Set up figure
+        fig1 = plt.figure(figsize=(19, 7))
+        ax1 = fig1.add_subplot(1, 1, 1)
+
+        # organize the data
+        xl = np.array([1.8, 2.5, 20, 4.5, 0.02, 0.00, 0.90, 0.52, 0.00, 0.00,
+                        min(pos_array[:, -1]) - min(pos_array[:, -1])*0.004
+                    ]).reshape(1, -1) 
+        
+        xu = np.array([2, 40, 5000.00, 4482.00, 4.20, 23.71, 1.5, 1.5, 16.00, 32.09,
+                        max(pos_array[:, -1]) + max(pos_array[:, -1])*0.004
+                        ]).reshape(1, -1)
+
+        pos_array = np.vstack([pos_array, xl])
+        pos_array = np.vstack([pos_array, xu])
+        pos_array = pos_array[pos_array[:, -1].argsort()]
+        
+        ys = pos_array
+        
+        ymins = ys.min(axis=0)
+        ymaxs = ys.max(axis=0)
+        dys = ymaxs - ymins
+        ymins += dys * 0.005  # add 5% padding below and above
+        ymaxs -= dys * 0.005
+        dys = ymaxs - ymins
+
+        # transform all data to be compatible with the main axis
+        zs = np.zeros_like(ys)
+        zs[:, 0] = ys[:, 0]
+        zs[:, 1:] = (ys[:, 1:] - ymins[1:]) / dys[1:] * dys[0] + ymins[0]
+
+        host = ax1
+        ynames = labels
+
+        axes = [host] + [host.twinx() for i in range(ys.shape[1] - 1)]
+        for i, ax in enumerate(axes):
+            #ax = self.ax_formatter(ax, xax=False)
+            ax.set_ylim(ymins[i], ymaxs[i])
+            ax.spines['top'].set_visible(False)
+            ax.spines['bottom'].set_visible(False)
+            if ax != host:
+                ax.spines['left'].set_visible(False)
+                ax.yaxis.set_ticks_position('right')
+                ax.spines["right"].set_position(
+                    ("axes", i / (ys.shape[1] - 1)))
+
+        host.set_xlim(0, ys.shape[1] - 1)
+        host.set_xticks(range(ys.shape[1]))
+        host.set_xticklabels(ynames, fontsize=11)
+        host.tick_params(axis='x', which='major', pad=7)
+        host.spines['right'].set_visible(False)
+        host.xaxis.tick_top()
+        colors = cm.plasma(np.linspace(0, 1, len(pos_array[:, 0])+2))
+
+        
+        N = len(pos_array[:, 0])
+
+        for j in range(N):
+
+            verts = list(
+                zip([
+                    x for x in np.linspace(0,
+                                            len(ys[0, :]) - 1,
+                                            len(ys[0, :]) * 3 - 2,
+                                            endpoint=True)
+                ],
+                    np.repeat(zs[j, :], 3)[1:-1]))
+            # for x,y in verts: host.plot(x, y, 'go') # to show the control points of the beziers
+            codes = [Path.MOVETO
+                        ] + [Path.CURVE4 for _ in range(len(verts) - 1)]
+            path = Path(verts, codes)
+            patch = patches.PathPatch(path,
+                                        facecolor='none',
+                                        lw=1.5,
+                                        edgecolor=colors[j]#[j - 1]
+                                        )
+            host.add_patch(patch)
+        
+        norm = plt.Normalize(ymins[-1], ymaxs[-1])
+        
+        cbar = fig1.colorbar(cm.ScalarMappable(norm=norm, cmap='plasma'), ax=ax, pad = -0.002, aspect=60)
+        cbar.ax.yaxis.set_ticks_position('none')
+        cbar.ax.yaxis.set_ticklabels([])
+        #cbar.ax = self.ax_formatter(cbar.ax, xax=False)
+
+        cbar.ax.tick_params(
+                         length=7)
+        cbar.ax.tick_params(which='minor',
+                         length=3)
+
+        #host = self.ax_formatter(host, xax=False)
+        plt.tight_layout()
+        if save_fig:
+            plt.savefig(f'/reports/images/{name}.png',
+                    transparent=True,
+                    bbox_inches='tight')
+        
+        return None
+
+
+
+def plot_multi_ga_case_D2(res, num_features: int = 7,
+                  is_max: bool = True,
+                  name = 'multi_ga',
+                  save_fig: bool = False):
+        
+        # get the X and F values
+        if is_max: 
+            sol_array = np.asarray(-res.F[:, 0]).reshape(-1,) * 1e-3
+        else:
+            sol_array = np.asarray(res.F[:, 0]).reshape(-1,)
+
+        # normalize the sol_array by 1e-3
+        #sol_array = sol_array/1e3
+
+        pos_array = np.asarray(res.X).reshape(-1, num_features)
+        pos_array = np.column_stack((pos_array, sol_array))
+
+        x = np.arange(0, len(pos_array[0, :]))
+
+        # y_axes names
+        #[SA, DG, %N, %O, %S, CD, CONC, CAP]
+        
+        all_labels = [
+            r'$\rm SA$', r'$\rm DG$', r'$\rm N\ content$', r'$\rm O\ content$',
+            r'$\rm S\ content$', r'$\rm CD$', r'$\rm CONC$', r'$\rm CAP$']
+
+        all_units = [
+                    r'$\rm m^{2}/g$', r'$\rm unitless$', r'$\rm at.\%$', r'$\rm at.\%$',
+                    r'$\rm at.\%$', r'$\rm A/g$', r'$\rm M$', r'$\rm *10^{3} \ F/g$']
+        
+
+        labels = [f'{all_labels[i]}\n({all_units[i]})' for i in range(len(all_labels))]
+
+
+        # Set up figure
+        fig1 = plt.figure(figsize=(19, 7))
+        ax1 = fig1.add_subplot(1, 1, 1)
+
+        # organize the data
+        xl = np.array([37.90, 0.38, 0.00, 2.36, 0.10, 0.10, 0.25,
+                        min(pos_array[:, -1]) - min(pos_array[:, -1])*0.004
+                    ]).reshape(1, -1) 
+
+        xu = np.array([500, 2.57, 5, 12, 26.56, 3.00, 6.00,
+                                max(pos_array[:, -1]) + max(pos_array[:, -1])*0.004
+                                ]).reshape(1, -1)
+
+        pos_array = np.vstack([pos_array, xl])
+        pos_array = np.vstack([pos_array, xu])
+        pos_array = pos_array[pos_array[:, -1].argsort()]
+        
+        ys = pos_array
+        
+        ymins = ys.min(axis=0)
+        ymaxs = ys.max(axis=0)
+        dys = ymaxs - ymins
+        ymins += dys * 0.002  # add 5% padding below and above
+        ymaxs -= dys * 0.002
+        dys = ymaxs - ymins
+
+        # transform all data to be compatible with the main axis
+        zs = np.zeros_like(ys)
+        zs[:, 0] = ys[:, 0]
+        zs[:, 1:] = (ys[:, 1:] - ymins[1:]) / dys[1:] * dys[0] + ymins[0]
+
+        host = ax1
+        ynames = labels
+
+        axes = [host] + [host.twinx() for i in range(ys.shape[1] - 1)]
+        for i, ax in enumerate(axes):
+            #ax = self.ax_formatter(ax, xax=False)
+            ax.set_ylim(ymins[i], ymaxs[i])
+            ax.spines['top'].set_visible(False)
+            ax.spines['bottom'].set_visible(False)
+            if ax != host:
+                ax.spines['left'].set_visible(False)
+                ax.yaxis.set_ticks_position('right')
+                ax.spines["right"].set_position(
+                    ("axes", i / (ys.shape[1] - 1)))
+
+        host.set_xlim(0, ys.shape[1] - 1)
+        host.set_xticks(range(ys.shape[1]))
+        host.set_xticklabels(ynames, fontsize=11)
+        host.tick_params(axis='x', which='major', pad=7)
+        host.spines['right'].set_visible(False)
+        host.xaxis.tick_top()
+        #host.set_title('Parallel Coordinates Plot', fontsize=18)
+
+        colors = cm.plasma(np.linspace(0, 1, len(pos_array[:, 0])+2))
+
+        
+        N = len(pos_array[:, 0])
+
+        for j in range(N):
+
+            verts = list(
+                zip([
+                    x for x in np.linspace(0,
+                                            len(ys[0, :]) - 1,
+                                            len(ys[0, :]) * 3 - 2,
+                                            endpoint=True)
+                ],
+                    np.repeat(zs[j, :], 3)[1:-1]))
+            # for x,y in verts: host.plot(x, y, 'go') # to show the control points of the beziers
+            codes = [Path.MOVETO
+                        ] + [Path.CURVE4 for _ in range(len(verts) - 1)]
+            path = Path(verts, codes)
+            patch = patches.PathPatch(path,
+                                        facecolor='none',
+                                        lw=1.5,
+                                        edgecolor=colors[j]#[j - 1]
+                                        )
+            host.add_patch(patch)
+        
+        norm = plt.Normalize(ymins[-1], ymaxs[-1])
+        
+        cbar = fig1.colorbar(cm.ScalarMappable(norm=norm, cmap='plasma'), ax=ax, pad = -0.002, aspect=60)
+        cbar.ax.yaxis.set_ticks_position('none')
+        cbar.ax.yaxis.set_ticklabels([])
+        #cbar.ax = self.ax_formatter(cbar.ax, xax=False)
+
+        cbar.ax.tick_params(
+                         length=7)
+        cbar.ax.tick_params(which='minor',
+                         length=3)
+
+        #host = self.ax_formatter(host, xax=False)
+        plt.tight_layout()
+        if save_fig:
+            plt.savefig(f'/reports/images/{name}.png',
+                    transparent=True,
+                    bbox_inches='tight')
+        
+        return None
